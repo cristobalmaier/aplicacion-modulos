@@ -1,0 +1,24 @@
+{
+  "html-test": {
+    "type": "static",
+    "status": "stopped"
+  },
+  "my-react-app": {
+    "type": "node",
+    "status": "running",
+    "port": 63203,
+    "pid": 2328,
+    "url": "http://localhost:63203"
+  },
+  "csstest": {
+    "type": "static",
+    "status": "stopped"
+  },
+  "php": {
+    "type": "php",
+    "status": "running",
+    "port": 63356,
+    "pid": 16612,
+    "url": "http://localhost:63356"
+  }
+}

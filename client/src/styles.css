@@ -1,0 +1,7 @@
+/* Minimal reset and theming */
+* { box-sizing: border-box; }
+:root {
+  --bg: #0f172a;
+  --panel: #ffffff;
+}
+body { background: var(--panel); color: #0f172a; }
