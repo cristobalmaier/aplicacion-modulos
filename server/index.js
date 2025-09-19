@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url'
 import AdmZip from 'adm-zip'
 import mime from 'mime-types'
 import getPort from 'get-port'
-import { spawn } from 'child_process'
+import spawn from 'cross-spawn'
 import kill from 'tree-kill'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -289,10 +289,34 @@ function getInstallCommand(cwd) {
   return { bin: isWin ? 'npm.cmd' : 'npm', args: ['install', '--legacy-peer-deps'] }
 }
 
+// Check if the project is a Svelte app
+function isSvelteApp(cwd) {
+  const pkgPath = path.join(cwd, 'package.json')
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      return pkg.dependencies && (pkg.dependencies['@sveltejs/kit'] || pkg.dependencies['svelte'])
+    } catch (e) {
+      console.error('Error reading package.json:', e)
+    }
+  }
+  return false
+}
+
 // Obtener comando de inicio
 function getStartCommand(cwd) {
   const pm = getPackageManager(cwd)
   const isWin = /^win/.test(process.platform)
+  const bin = isWin ? `${pm}.cmd` : pm
+  
+  // Check if it's a Svelte app
+  if (isSvelteApp(cwd)) {
+    if (pm === 'yarn') return { bin: isWin ? 'yarn.cmd' : 'yarn', args: ['dev'] }
+    if (pm === 'pnpm') return { bin: isWin ? 'pnpm.cmd' : 'pnpm', args: ['dev'] }
+    return { bin: isWin ? 'npm.cmd' : 'npm', args: ['run', 'dev'] }
+  }
+  
+  // Default to start script for other apps
   if (pm === 'yarn') return { bin: isWin ? 'yarn.cmd' : 'yarn', args: ['start'] }
   if (pm === 'pnpm') return { bin: isWin ? 'pnpm.cmd' : 'pnpm', args: ['start'] }
   return { bin: isWin ? 'npm.cmd' : 'npm', args: ['start'] }
@@ -310,16 +334,35 @@ function getBuildCommand(cwd) {
 // Instalar dependencias
 function runInstall(cwd) {
   return new Promise((resolve, reject) => {
-    const { bin, args } = getInstallCommand(cwd)
-    const child = spawn(bin, args, {
-      cwd,
-      stdio: 'inherit',
-      env: process.env,
-    })
-    child.on('close', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`install failed with code ${code}`))
-    })
+    try {
+      const { bin, args } = getInstallCommand(cwd)
+      console.log(`Running: ${bin} ${args.join(' ')} in ${cwd}`)
+      
+      const child = spawn(bin, args, {
+        cwd,
+        stdio: 'inherit',
+        env: process.env,
+        shell: true,
+        windowsHide: true
+      })
+      
+      child.on('error', (err) => {
+        console.error('Error spawning process:', err)
+        reject(new Error(`Failed to start installation: ${err.message}`))
+      })
+      
+      child.on('close', (code) => {
+        if (code === 0) {
+          console.log('Installation completed successfully')
+          resolve()
+        } else {
+          reject(new Error(`Installation failed with code ${code}`))
+        }
+      })
+    } catch (err) {
+      console.error('Error in runInstall:', err)
+      reject(err)
+    }
   })
 }
 
@@ -419,7 +462,7 @@ app.post('/api/apps/upload', upload.single('file'), async (req, res) => {
   }
 })
 
-// API: Iniciar aplicacion (node o php); las estaticas devuelven URL directa
+// API: Iniciar aplicacion (node o php) las estaticas devuelven URL directa
 app.post('/api/apps/:name/start', async (req, res) => {
   const { name } = req.params
   const info = registry[name]

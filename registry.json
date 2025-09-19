@@ -3,22 +3,19 @@
     "type": "static",
     "status": "stopped"
   },
-  "my-react-app": {
-    "type": "node",
-    "status": "running",
-    "port": 63203,
-    "pid": 2328,
-    "url": "http://localhost:63203"
-  },
   "csstest": {
     "type": "static",
     "status": "stopped"
   },
-  "php": {
-    "type": "php",
+  "react": {
+    "type": "node",
+    "status": "stopped"
+  },
+  "wsvelte": {
+    "type": "node",
     "status": "running",
-    "port": 63356,
-    "pid": 16612,
-    "url": "http://localhost:63356"
+    "port": 65101,
+    "pid": 17636,
+    "url": "http://localhost:65101"
   }
 }
