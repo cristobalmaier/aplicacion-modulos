@@ -1,2 +1,3 @@
-# aplicacion-modulos
-Crear desde cero un contenedor con modulos que contengan aplicaciones / softwares
+#Cosas para hacer
+1. Arreglar la UI
+2. Testing
