@@ -177,7 +177,7 @@ async function ensureNodeAppRunning(name) {
     await runBuild(appPath)
   }
 
-  const { bin, args } = getStartCommand(appPath)
+  const { bin, args } = getStartCommand(appPath, port)
   const child = spawn(bin, args, {
     cwd: appPath,
     env,
@@ -289,13 +289,22 @@ function getInstallCommand(cwd) {
   return { bin: isWin ? 'npm.cmd' : 'npm', args: ['install', '--legacy-peer-deps'] }
 }
 
+// Utilidad: verificar dependencias (dependencies o devDependencies)
+function hasDep(pkg, name) {
+  return Boolean((pkg.dependencies && pkg.dependencies[name]) || (pkg.devDependencies && pkg.devDependencies[name]))
+}
+
 // Check if the project is a Svelte app
 function isSvelteApp(cwd) {
   const pkgPath = path.join(cwd, 'package.json')
   if (fs.existsSync(pkgPath)) {
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-      return pkg.dependencies && (pkg.dependencies['@sveltejs/kit'] || pkg.dependencies['svelte'])
+      return (
+        hasDep(pkg, '@sveltejs/kit') ||
+        hasDep(pkg, 'svelte') ||
+        hasDep(pkg, '@sveltejs/vite-plugin-svelte')
+      )
     } catch (e) {
       console.error('Error reading package.json:', e)
     }
@@ -303,23 +312,48 @@ function isSvelteApp(cwd) {
   return false
 }
 
+// Check if the project is Vite-based (needs --port flag rather than PORT env)
+function isViteProject(cwd) {
+  const pkgPath = path.join(cwd, 'package.json')
+  if (!fs.existsSync(pkgPath)) return false
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    if (hasDep(pkg, 'vite')) return true
+    const s = pkg.scripts || {}
+    return ['dev', 'serve', 'preview', 'start'].some((k) => typeof s[k] === 'string' && /\bvite\b|svelte-?kit\b/.test(s[k]))
+  } catch {
+    return false
+  }
+}
+
 // Obtener comando de inicio
-function getStartCommand(cwd) {
+function getStartCommand(cwd, port) {
   const pm = getPackageManager(cwd)
   const isWin = /^win/.test(process.platform)
   const bin = isWin ? `${pm}.cmd` : pm
-  
-  // Check if it's a Svelte app
-  if (isSvelteApp(cwd)) {
-    if (pm === 'yarn') return { bin: isWin ? 'yarn.cmd' : 'yarn', args: ['dev'] }
-    if (pm === 'pnpm') return { bin: isWin ? 'pnpm.cmd' : 'pnpm', args: ['dev'] }
-    return { bin: isWin ? 'npm.cmd' : 'npm', args: ['run', 'dev'] }
+
+  // Leer scripts para elegir el mejor comando disponible
+  const pkg = readPackageJson(cwd) || { scripts: {} }
+  const scripts = pkg.scripts || {}
+
+  // Orden de preferencia de scripts
+  let chosen = null
+  for (const key of ['start', 'dev', 'serve', 'preview']) {
+    if (typeof scripts[key] === 'string') {
+      chosen = key
+      break
+    }
   }
-  
-  // Default to start script for other apps
-  if (pm === 'yarn') return { bin: isWin ? 'yarn.cmd' : 'yarn', args: ['start'] }
-  if (pm === 'pnpm') return { bin: isWin ? 'pnpm.cmd' : 'pnpm', args: ['start'] }
-  return { bin: isWin ? 'npm.cmd' : 'npm', args: ['start'] }
+  if (!chosen) chosen = 'start' // fallback por compatibilidad
+
+  // Detectar si es proyecto Vite/Svelte para pasar --port explicito
+  const needsCliPort = isViteProject(cwd) || isSvelteApp(cwd)
+
+  // Estandarizar a "run <script>" y reenviar flags con "--"
+  const baseArgs = ['run', chosen]
+  const withPort = needsCliPort && port ? baseArgs.concat(['--', '--port', String(port)]) : baseArgs
+
+  return { bin, args: withPort }
 }
 
 // Obtener comando de construccion
