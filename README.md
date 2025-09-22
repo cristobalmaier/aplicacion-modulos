@@ -1,3 +1,3 @@
 # Cosas para hacer
-1. Arreglar la UI
-2. Testing
+1. Testing
+2. Hacer un buen readme
