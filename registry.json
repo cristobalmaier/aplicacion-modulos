@@ -2,8 +2,22 @@
   "svelte": {
     "type": "node",
     "status": "running",
-    "port": 64257,
-    "pid": 10904,
-    "url": "http://localhost:64257"
+    "port": 49183,
+    "pid": 18424,
+    "url": "http://localhost:49183"
+  },
+  "my-react-app": {
+    "type": "node",
+    "status": "running",
+    "port": 50272,
+    "pid": 14340,
+    "url": "http://localhost:50272"
+  },
+  "my-react-app-1": {
+    "type": "node",
+    "status": "running",
+    "port": 50588,
+    "pid": 4480,
+    "url": "http://localhost:50588"
   }
 }

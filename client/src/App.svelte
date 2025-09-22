@@ -14,7 +14,7 @@
   let starting = false
   let error = ''
   let collapsed = false
-  let view = 'home' // 'home' | 'docs' | 'app'
+  let view = 'app' // 'docs' | 'app' (app shows welcome when idle)
 
   // Carga la lista de aplicaciones desde el backend
   async function loadApps(selectName = null) {
@@ -96,19 +96,23 @@
   .brand button:hover { background: rgba(255,255,255,0.08); }
   .brandTitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .apps { flex: 1; overflow: auto; padding: 8px; }
-  .groupLabel { font-size: 11px; opacity: .7; padding: 6px 8px; }
-  .navBtn, .appItem { padding: 10px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 10px; border: 1px solid transparent; transition: background .15s ease, border-color .15s ease, transform .05s; }
-  .navBtn:hover, .appItem:hover { background: #111a33; border-color: #1f2a46; }
-  .navBtn:active, .appItem:active { transform: translateY(1px); }
+  .apps .appItem { margin-bottom: 8px; }
+  .groupLabel { font-size: 12px; padding: 8px 10px; font-weight: 700; color: rgba(229,231,235,0.9); margin-bottom: 8px; }
+  .appItem { width: 100%; padding: 10px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 10px; border: 1px solid #1f2a46; background: transparent; color: #ffffff; transition: background .15s ease, border-color .15s ease, transform .05s; }
+  .appItem:hover { background: #111a33; border-color: #243455; }
+  .appItem:active { transform: translateY(1px); }
   .appItem.active { background: #1b2440; border-color: #223054; }
   .icon { width: 28px; height: 28px; display:grid; place-items:center; background:#16213a; border-radius:8px; }
   .label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; background: #374151; color: #e5e7eb; }
   .hideWhenCollapsed { display: inline; }
   .sidebar.collapsed .hideWhenCollapsed { display: none; }
-  .footer { padding: 8px; border-top: 1px solid #1f2937; }
+  .footer { padding: 8px; border-top: 1px solid #1f2937; display:flex; flex-direction:column; gap:8px; }
   .addBtn { width: 100%; display: inline-flex; align-items:center; gap:8px; justify-content:center; padding: 10px 12px; background:#1d4ed8; border: 1px solid #1e40af; border-radius: 10px; cursor: pointer; color: white; font-weight:600; }
   .addBtn:hover { filter: brightness(1.08); }
+  .secondaryBtn { width: 100%; display:inline-flex; align-items:center; gap:8px; justify-content:center; padding:10px 12px; background:#111a33; color:#e5e7eb; border:1px solid #1f2a46; border-radius:10px; cursor:pointer; }
+  .secondaryBtn:hover { filter: brightness(1.12); }
+  .secondaryBtn .hideWhenCollapsed { font-weight: 700; }
   .hiddenInput { display: none; }
   .content { position: relative; margin-left: 260px; height: 100vh; display:flex; flex-direction:column; }
   .content.collapsed { margin-left: 68px; }
@@ -138,16 +142,6 @@
       <div class="brandTitle hideWhenCollapsed">Panel</div>
     </div>
     <div class="apps">
-      <div class="groupLabel hideWhenCollapsed">Navegación</div>
-      <button type="button" class="navBtn" on:click={() => (view = 'home', selected = null, iframeUrl = '')}>
-        <div class="icon">🏠</div>
-        <div class="label hideWhenCollapsed">Inicio</div>
-      </button>
-      <button type="button" class="navBtn" on:click={() => (view = 'docs')}>
-        <div class="icon">📄</div>
-        <div class="label hideWhenCollapsed">Documentación</div>
-      </button>
-
       <div class="groupLabel hideWhenCollapsed" style="margin-top:8px;">Aplicaciones</div>
       {#if apps.length === 0}
         <div class="appItem" style="opacity: 0.7">No apps yet</div>
@@ -161,6 +155,10 @@
       {/each}
     </div>
     <div class="footer">
+      <button type="button" class="secondaryBtn" on:click={() => (view = 'docs', selected = null, iframeUrl = '')}>
+        <span>📄</span>
+        <span class="hideWhenCollapsed">Documentación</span>
+      </button>
       <label class="addBtn">
         <span>＋</span>
         <span class="hideWhenCollapsed">Añadir app</span>
@@ -173,11 +171,9 @@
     <div class="topbar">
       <div style="flex:1; font-weight:700;">
         {#if view === 'app'}
-          {selected ? selected.name : 'Aplicación'}
+          {selected ? selected.name : 'Panel'}
         {:else if view === 'docs'}
           Documentación
-        {:else}
-          Inicio
         {/if}
       </div>
       {#if error}
@@ -189,27 +185,30 @@
       {#if iframeUrl}
         <iframe src={iframeUrl} title={selected?.name}></iframe>
       {:else}
-        <div class="welcome" style="color:#6b7280;">Iniciando la aplicación...</div>
+        <div class="welcome">
+          <h1>Bienvenido al panel de administracion digital de la Tecnica 1</h1>
+          <p>Usa la barra lateral para añadir o abrir aplicaciones, o visita la documentación.</p>
+        </div>
       {/if}
     {:else if view === 'docs'}
-      <Docs onBack={() => (view = 'home')} />
-    {:else}
-      <div class="welcome">
-        <h1>Bienvenido al panel de administracion digital de la Tecnica 1</h1>
-        <p>Usa la barra lateral para añadir o abrir aplicaciones, o visita la documentación.</p>
-      </div>
+      <Docs onBack={() => (view = 'app')} />
     {/if}
   </section>
 
   {#if uploading || starting}
     <div class="modal">
       <div class="modalCard">
-        <div style="font-weight:700; margin-bottom:8px;">{uploading ? 'Subiendo aplicación' : 'Iniciando aplicación'}</div>
+        <div style="font-weight:700; margin-bottom:8px;">{uploading ? (uploadProgress < 100 ? 'Subiendo aplicación' : 'Procesando archivo') : 'Iniciando aplicación'}</div>
         {#if uploading}
-          <div class="progressOuter" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
-            <div class="progressInner" style={`width:${uploadProgress}%`}></div>
-          </div>
-          <div class="status" style="margin-top:8px;">{uploadProgress}%</div>
+          {#if uploadProgress < 100}
+            <div class="progressOuter" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
+              <div class="progressInner" style={`width:${uploadProgress}%`}></div>
+            </div>
+            <div class="status" style="margin-top:8px;">{uploadProgress}%</div>
+          {:else}
+            <div class="progressOuter progressIndef"></div>
+            <div class="status" style="margin-top:8px;">Descomprimiendo y registrando…</div>
+          {/if}
         {:else}
           <div class="progressOuter progressIndef"></div>
           <div class="status" style="margin-top:8px;">Esto puede tardar unos segundos…</div>
