@@ -1,21 +1,9 @@
 {
-  "html-test": {
-    "type": "static",
-    "status": "stopped"
-  },
-  "csstest": {
-    "type": "static",
-    "status": "stopped"
-  },
-  "react": {
-    "type": "node",
-    "status": "stopped"
-  },
-  "wsvelte": {
+  "svelte": {
     "type": "node",
     "status": "running",
-    "port": 65101,
-    "pid": 17636,
-    "url": "http://localhost:65101"
+    "port": 64257,
+    "pid": 10904,
+    "url": "http://localhost:64257"
   }
 }

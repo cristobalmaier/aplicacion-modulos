@@ -9,11 +9,16 @@ export async function listApps() {
 }
 
 // Subir un archivo .zip con el campo "file"
-export async function uploadZip(file) {
+export async function uploadZip(file, onProgress) {
   const form = new FormData();
   form.append('file', file);
   const { data } = await axios.post('/api/apps/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (evt) => {
+      if (!evt.total) return;
+      const pct = Math.round((evt.loaded / evt.total) * 100);
+      onProgress && onProgress(pct);
+    },
   });
   return data;
 }
