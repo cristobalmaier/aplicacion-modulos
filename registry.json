@@ -1,23 +1,16 @@
 {
-  "svelte": {
+  "wsvelte": {
     "type": "node",
     "status": "running",
-    "port": 49183,
-    "pid": 18424,
-    "url": "http://localhost:49183"
+    "port": 62898,
+    "pid": 14280,
+    "url": "http://localhost:62898"
   },
-  "my-react-app": {
+  "reactapp": {
     "type": "node",
     "status": "running",
-    "port": 50272,
-    "pid": 14340,
-    "url": "http://localhost:50272"
-  },
-  "my-react-app-1": {
-    "type": "node",
-    "status": "running",
-    "port": 50588,
-    "pid": 4480,
-    "url": "http://localhost:50588"
+    "port": 61067,
+    "pid": 7380,
+    "url": "http://localhost:61067"
   }
 }

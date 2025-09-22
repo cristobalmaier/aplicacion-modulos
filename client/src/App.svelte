@@ -2,19 +2,32 @@
   // Componente principal de la UI
   // Barra lateral fija con lista de apps y boton para subir .zip
   // Panel derecho con iframe que carga la app seleccionada
-  import { onMount } from 'svelte'
-  import * as api from './api'
-  import Docs from './Docs.svelte'
+  import { onMount } from 'svelte';
+  import * as api from './api';
+  import Docs from './Docs.svelte';
+  import Login from './components/Login.svelte';
+  import { user, isAdmin, signOut } from './stores/auth';
 
-  let apps = []
-  let selected = null 
-  let iframeUrl = ''
-  let uploading = false
-  let uploadProgress = 0
-  let starting = false
-  let error = ''
-  let collapsed = false
-  let view = 'app' // 'docs' | 'app' (app shows welcome when idle)
+  let apps = [];
+  let selected = null;
+  let iframeUrl = '';
+  let uploading = false;
+  let uploadProgress = 0;
+  let starting = false;
+  let error = '';
+  let collapsed = false;
+  let view = 'app'; // 'docs' | 'app' (app shows welcome when idle)
+  let showAdminAlert = false;
+  
+  // Handle user authentication state
+  $: if ($user) {
+    loadApps();
+    // Show admin status alert if user is admin
+    if ($isAdmin) {
+      showAdminAlert = true;
+      setTimeout(() => showAdminAlert = false, 5000);
+    }
+  }
 
   // Carga la lista de aplicaciones desde el backend
   async function loadApps(selectName = null) {
@@ -77,7 +90,79 @@
 
 <style>
   /* Estilos basicos del layout */
-  .layout { height: 100vh; }
+  .layout { 
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Admin Alert Styles */
+  .admin-alert {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem 2rem 1rem 1rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .admin-message {
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.25rem;
+  }
+  
+  .user-message {
+    color: #856404;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.25rem;
+  }
+  
+  .close-button {
+    margin-left: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+  }
+  
+  .user-info {
+    margin-top: auto;
+    padding: 1rem;
+    border-top: 1px solid #eaeaea;
+  }
+  
+  .user-email {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .logout-button {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #dc3545;
+  }
+  
+  .logout-button:hover {
+    background-color: #f1f3f5;
+  }
   .sidebar {
     position: fixed;
     left: 0; top: 0; bottom: 0;
@@ -121,7 +206,6 @@
   .error { color: #b91c1c; font-size: 14px; }
   .status { font-size: 12px; color: #6b7280; }
   .welcome { padding: 24px; }
-  .welcome h1 { font-size: 28px; margin: 0 0 12px 0; }
   .modal {
     position: fixed; inset: 0; background: rgba(0,0,0,0.35);
     display: flex; align-items: center; justify-content: center;
@@ -135,11 +219,29 @@
   @keyframes slide { from { left: -40%; } to { left: 100%; } }
   </style>
 
-<div class="layout">
-  <aside class="sidebar {collapsed ? 'collapsed' : ''}">
-    <div class="brand">
-      <button aria-label="Toggle sidebar" on:click={() => (collapsed = !collapsed)}>☰</button>
-      <div class="brandTitle hideWhenCollapsed">Panel</div>
+{#if !$user}
+  <Login />
+{:else}
+  {#if showAdminAlert}
+    <div class="admin-alert">
+      {#if $isAdmin}
+        <div class="admin-message">¡Eres un administrador!</div>
+      {:else}
+        <div class="user-message">No tienes privilegios de administrador</div>
+      {/if}
+      <button class="close-button" on:click={() => showAdminAlert = false}>×</button>
+    </div>
+  {/if}
+
+  <div class="layout">
+    <aside class="sidebar {collapsed ? 'collapsed' : ''}">
+      <div class="brand">
+        <button aria-label="Toggle sidebar" on:click={() => (collapsed = !collapsed)}>☰</button>
+        <div class="brandTitle hideWhenCollapsed">Panel</div>
+        <div class="user-info hideWhenCollapsed">
+          <div class="user-email">{$user?.email}</div>
+          <button class="logout-button" on:click={signOut}>Cerrar sesión</button>
+        </div>
     </div>
     <div class="apps">
       <div class="groupLabel hideWhenCollapsed" style="margin-top:8px;">Aplicaciones</div>
@@ -164,44 +266,59 @@
         <span class="hideWhenCollapsed">Añadir app</span>
         <input class="hiddenInput" type="file" accept=".zip" on:change={onUploadChange} />
       </label>
-    </div>
-  </aside>
+      </div>
+    </aside>
 
-  <section class="content {collapsed ? 'collapsed' : ''}">
-    <div class="topbar">
-      <div style="flex:1; font-weight:700;">
-        {#if view === 'app'}
-          {selected ? selected.name : 'Panel'}
-        {:else if view === 'docs'}
-          Documentación
+    <section class="content {collapsed ? 'collapsed' : ''}">
+      <div class="topbar">
+        <div style="flex:1; font-weight:700;">
+          {#if view === 'app'}
+            {selected ? selected.name : 'Panel'}
+          {:else if view === 'docs'}
+            Documentación
+          {/if}
+        </div>
+        {#if error}
+          <div class="error">{error}</div>
         {/if}
       </div>
-      {#if error}
-        <div class="error">{error}</div>
-      {/if}
-    </div>
-
-    {#if view === 'app'}
-      {#if iframeUrl}
-        <iframe src={iframeUrl} title={selected?.name}></iframe>
-      {:else}
-        <div class="welcome">
-          <h1>Bienvenido al panel de administracion digital de la Tecnica 1</h1>
-          <p>Usa la barra lateral para añadir o abrir aplicaciones, o visita la documentación.</p>
-        </div>
-      {/if}
-    {:else if view === 'docs'}
-      <Docs onBack={() => (view = 'app')} />
+    
+    {#if view === 'docs'}
+      <Docs on:back={() => (view = 'app')} />
+    {:else if selected && iframeUrl}
+      <iframe
+        src={iframeUrl}
+        title={selected.name}
+        class="app-iframe"
+        on:load={() => (starting = false)}
+      ></iframe>
+    {:else}
+      <div class="welcome">
+        <h2>Bienvenido al Panel de Control</h2>
+        <p>Selecciona una aplicación para comenzar o sube una nueva.</p>
+      </div>
     {/if}
   </section>
-
+  
+  {#if starting && !uploading}
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Iniciando {selected?.name}...</p>
+    </div>
+  {/if}
+  
   {#if uploading || starting}
     <div class="modal">
       <div class="modalCard">
-        <div style="font-weight:700; margin-bottom:8px;">{uploading ? (uploadProgress < 100 ? 'Subiendo aplicación' : 'Procesando archivo') : 'Iniciando aplicación'}</div>
+        <div style="font-weight:700; margin-bottom:8px;">
+          {uploading 
+            ? (uploadProgress < 100 ? 'Subiendo aplicación' : 'Procesando archivo') 
+            : 'Iniciando aplicación'}
+        </div>
         {#if uploading}
           {#if uploadProgress < 100}
-            <div class="progressOuter" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
+            <div class="progressOuter" aria-label="Upload progress" 
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
               <div class="progressInner" style={`width:${uploadProgress}%`}></div>
             </div>
             <div class="status" style="margin-top:8px;">{uploadProgress}%</div>
@@ -217,3 +334,4 @@
     </div>
   {/if}
 </div>
+{/if}
